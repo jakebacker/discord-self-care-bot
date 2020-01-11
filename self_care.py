@@ -57,5 +57,5 @@ async def on_message(message):
 
     # Do bot things
 
-
+read_token()
 client.run(TOKEN)
