@@ -2,12 +2,22 @@ import discord
 import json
 from os import path
 
+"""
+TODO:
+Check the system time, if past 2am and user ID = declan, Luke, anyone else who opts in react with :zzz:
+Maybe even let it be configurable
+Could probably do it per user if I wanted to
+
+"""
+
 
 client = discord.Client()
 
-data = {}
+user_data = {}
+config = {}  # opt_in_id
 
 DATA_FILE = "data.json"
+CONFIG_FILE = "config.json"
 
 BOT_CHANNEL_ID = 664999941374083072
 
@@ -23,31 +33,51 @@ def read_token():
         TOKEN = token_file.read()
 
 
-def does_file_exist():
-    return not path.exists(DATA_FILE)
+def does_file_exist(file_name):
+    return not path.exists(file_name)
 
 
-def file_to_dict():
-    with open(DATA_FILE, 'r') as file:
+def file_to_dict(file_name):
+    with open(file_name, 'r') as file:
         return json.loads(file.read())
 
 
-def write_file():
+def write_file(data, file_name):
     json_data = json.dumps(data)
-    with open(DATA_FILE, "w") as file:
+    with open(file_name, "w") as file:
         file.write(json_data)
     return
 
 
 @client.event
 async def on_ready():
-    global data
+    global user_data
+    global config
     print('We have logged in as {0.user}'.format(client))
-    if does_file_exist():
+    if does_file_exist(DATA_FILE):
         print("File does not exist!")
-        # Do initialization
+        write_file(user_data, DATA_FILE)
+        write_file(config, CONFIG_FILE)
     else:
-        data = file_to_dict()
+        user_data = file_to_dict(DATA_FILE)
+        config = file_to_dict(CONFIG_FILE)
+
+
+@client.event
+async def on_raw_reaction_add(payload):
+    # Add user to DB
+
+    if payload.message_id == config["opt_in_id"] and str(payload.emoji) == '💤':
+        user_data[payload.user_id] = "in"  # For now, just an on or off. This leaves room for changes
+        write_file(user_data, DATA_FILE)
+
+
+@client.event
+async def on_raw_reaction_remove(payload):
+
+    if payload.message_id == config["opt_in_id"] and str(payload.emoji) == '💤':
+        user_data[payload.user_id] = "out"  # For now, just an on or off. This leaves room for changes
+        write_file(user_data, DATA_FILE)
 
 
 @client.event
@@ -55,7 +85,11 @@ async def on_message(message):
     if message.author == client.user:
         return
 
-    # Do bot things
+    if message.content.startswith("%care opt-in") and message.channel == client.get_channel(BOT_CHANNEL_ID) \
+            and discord.utils.get(message.guild.roles, id=ADMIN_ROLE_ID) in message.author.roles:
+        opt_message = await message.channel.send("React to this message with :zzz: to be added to the self-care bot!")
+        config["opt_in_id"] = opt_message.id
+        write_file(config, CONFIG_FILE)
 
 read_token()
 client.run(TOKEN)
