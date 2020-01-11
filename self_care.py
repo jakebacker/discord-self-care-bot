@@ -81,6 +81,13 @@ def toggle_data(user_id, key, on, off):
         return on
 
 
+def in_between(now, start, end):
+    if start <= end:
+        return start <= now < end
+    else:  # over midnight e.g., 23:30-04:15
+        return start <= now or now < end
+
+
 @client.event
 async def on_ready():
     global user_data
@@ -126,12 +133,14 @@ async def on_message(message):
                 else:
                     set_user_data(user_str, key, value)
                     await message.channel.send("Set value {0} to {1} for user {2}".format(key, value, user_str))
+    else:
+        hour = get_hour()
 
-    hour = get_hour()
-    if config["late"] <= hour < config["morning"]:
         str_id = str(message.author.id)
         if user_data.__contains__(str_id) and user_data[str_id]["opt-in"] == "true":
-            await message.channel.send("{0} Get some sleep so you feel great tomorrow!".format(message.author.mention))
+            if in_between(hour, int(user_data[str_id]["sleep_start"]), int(user_data[str_id]["sleep_end"])):
+                await message.channel.send("{0} Get some sleep so you feel great tomorrow!"
+                                           .format(message.author.mention))
 
 
 read_token()
