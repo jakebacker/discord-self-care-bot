@@ -1,6 +1,7 @@
 import discord
 import json
 from os import path
+from datetime import datetime
 
 """
 TODO:
@@ -14,7 +15,7 @@ Could probably do it per user if I wanted to
 client = discord.Client()
 
 user_data = {}
-config = {}  # opt_in_id
+config = {}  # opt_in_id, late, morning
 
 DATA_FILE = "data.json"
 CONFIG_FILE = "config.json"
@@ -25,6 +26,10 @@ ADMIN_ROLE_ID = 665000607291277376
 
 TOKEN_FILE = "token.txt"
 TOKEN = ""
+
+
+def get_hour():
+    return int(datetime.now().strftime("%H"))
 
 
 def read_token():
@@ -90,6 +95,13 @@ async def on_message(message):
         opt_message = await message.channel.send("React to this message with :zzz: to be added to the self-care bot!")
         config["opt_in_id"] = opt_message.id
         write_file(config, CONFIG_FILE)
+
+    hour = get_hour()
+    if config["late"] <= hour < config["morning"]:
+        str_id = str(message.author.id)
+        if user_data.__contains__(str_id) and user_data[str_id] == "in":
+            await message.channel.send("{0} Get some sleep so you feel great tomorrow!".format(message.author.mention))
+
 
 read_token()
 client.run(TOKEN)
