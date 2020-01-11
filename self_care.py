@@ -13,7 +13,6 @@ Kick people who activate "hard mode"
 
 """
 
-
 client = discord.Client()
 
 user_data = {}
@@ -93,7 +92,7 @@ async def send_help_message(channel):
               "Valid commands:\n" \
               "**opt-in**                  Opt into sleep reminders\n" \
               "**set**                       Set a config option\n" \
-              "                             Options: sleep_start, sleep_end\n" \
+              "                             Options: sleep_start, sleep_end, hard_mode\n" \
               "**help**                     Send this message"
     await channel.send(message)
 
@@ -129,6 +128,8 @@ async def on_message(message):
                     set_user_data(user_str, "sleep_start", "00")
                 if not user_data[user_str].__contains__("sleep_end"):
                     set_user_data(user_str, "sleep_end", "06")
+                if not user_data[user_str].__contains__("hard_mode"):
+                    set_user_data(user_str, "hard_mode", "false")
                 await message.channel.send("New opt-in status for user {0}: {1}\n"
                                            "Default range for alerts is 00 to 06".format(message.author.mention, data))
             elif parts[1] == "set":
@@ -142,9 +143,14 @@ async def on_message(message):
                     else:
                         set_user_data(user_str, key, value)
                         await message.channel.send("Set value {0} to {1} for user {2}".format(key, value, user_str))
-                else:
-                    set_user_data(user_str, key, value)
-                    await message.channel.send("Set value {0} to {1} for user {2}".format(key, value, user_str))
+                elif key == "hard_mode":
+                    if not value == "true" and not value == "false":
+                        await message.channel.send("Invalid data for {0}."
+                                                   "Data must be either `true` or `false`".format(key))
+                    else:
+                        set_user_data(user_str, key, value)
+                        await message.channel.send("Set value {0} to {1} for user {2}".format(key, value, user_str))
+
             elif parts[1] == "help":
                 await send_help_message(message.channel)
 
@@ -154,8 +160,11 @@ async def on_message(message):
         str_id = str(message.author.id)
         if user_data.__contains__(str_id) and user_data[str_id]["opt-in"] == "true":
             if in_between(hour, int(user_data[str_id]["sleep_start"]), int(user_data[str_id]["sleep_end"])):
-                await message.channel.send("{0} Get some sleep so you feel great tomorrow!"
-                                           .format(message.author.mention))
+                if user_data[str_id]["hard_mode"] == "true":
+                    message.author.kick(reason="Get some sleep so you feel great tomorrow!")
+                else:
+                    await message.channel.send("{0} Get some sleep so you feel great tomorrow!"
+                                               .format(message.author.mention))
 
 
 read_token()
