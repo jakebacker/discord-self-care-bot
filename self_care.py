@@ -2,12 +2,14 @@ import discord
 import json
 from os import path
 from datetime import datetime
+import re
 
 """
 TODO:
 Check the system time, if past 2am and user ID = declan, Luke, anyone else who opts in react with :zzz:
 Maybe even let it be configurable
 Could probably do it per user if I wanted to
+Kick people who activate "hard mode"
 
 """
 
@@ -15,7 +17,7 @@ Could probably do it per user if I wanted to
 client = discord.Client()
 
 user_data = {}
-config = {}  # opt_in_id, late, morning
+config = {}  # late, morning
 
 DATA_FILE = "data.json"
 CONFIG_FILE = "config.json"
@@ -54,6 +56,31 @@ def write_file(data, file_name):
     return
 
 
+def init_user(user_id, key, default):
+    if not user_data.__contains__(user_id):
+        user_data[user_id] = {}
+
+    if not user_data[user_id].__contains__(key):
+        user_data[user_id][key] = default
+
+
+def set_user_data(user_id, key, value):
+    init_user(user_id, key, value)
+    user_data[user_id][key] = value
+    write_file(user_data, DATA_FILE)
+
+
+def toggle_data(user_id, key, on, off):
+    init_user(user_id, key, off)
+    user_dict = user_data[user_id]
+    if user_dict[key] == on:
+        set_user_data(user_id, key, off)
+        return off
+    else:
+        set_user_data(user_id, key, on)
+        return on
+
+
 @client.event
 async def on_ready():
     global user_data
@@ -69,37 +96,41 @@ async def on_ready():
 
 
 @client.event
-async def on_raw_reaction_add(payload):
-    # Add user to DB
-
-    if payload.message_id == config["opt_in_id"] and str(payload.emoji) == '💤':
-        user_data[payload.user_id] = "in"  # For now, just an on or off. This leaves room for changes
-        write_file(user_data, DATA_FILE)
-
-
-@client.event
-async def on_raw_reaction_remove(payload):
-
-    if payload.message_id == config["opt_in_id"] and str(payload.emoji) == '💤':
-        user_data[payload.user_id] = "out"  # For now, just an on or off. This leaves room for changes
-        write_file(user_data, DATA_FILE)
-
-
-@client.event
 async def on_message(message):
     if message.author == client.user:
         return
 
-    if message.content.startswith("%care opt-in") and message.channel == client.get_channel(BOT_CHANNEL_ID) \
-            and discord.utils.get(message.guild.roles, id=ADMIN_ROLE_ID) in message.author.roles:
-        opt_message = await message.channel.send("React to this message with :zzz: to be added to the self-care bot!")
-        config["opt_in_id"] = opt_message.id
-        write_file(config, CONFIG_FILE)
+    if message.content.startswith("%") and message.channel == client.get_channel(BOT_CHANNEL_ID):
+        parts = message.content.split(" ")
+        user_str = str(message.author.id)
+        if parts[0] == "%care":
+            if parts[1] == "opt-in":
+                data = toggle_data(user_str, "opt-in", "true", "false")
+                if not user_data[user_str].__contains__("sleep_start"):
+                    set_user_data(user_str, "sleep_start", "00")
+                if not user_data[user_str].__contains__("sleep_end"):
+                    set_user_data(user_str, "sleep_end", "06")
+                await message.channel.send("New opt-in status for user {0}: {1}\n"
+                                           "Default range for alerts is 00 to 06".format(message.author.mention, data))
+            elif parts[1] == "set":
+                key = parts[2]
+                value = parts[3]
+
+                if key == "sleep_start" or key == "sleep_end":
+                    if not len(value) == 2 or not re.match("^\\d{2}$", value) or not 0 <= int(value) <= 23:
+                        await message.channel.send("Invalid data for {0}. "
+                                                   "Data must be a number between 00 and 23".format(key))
+                    else:
+                        set_user_data(user_str, key, value)
+                        await message.channel.send("Set value {0} to {1} for user {2}".format(key, value, user_str))
+                else:
+                    set_user_data(user_str, key, value)
+                    await message.channel.send("Set value {0} to {1} for user {2}".format(key, value, user_str))
 
     hour = get_hour()
     if config["late"] <= hour < config["morning"]:
         str_id = str(message.author.id)
-        if user_data.__contains__(str_id) and user_data[str_id] == "in":
+        if user_data.__contains__(str_id) and user_data[str_id]["opt-in"] == "true":
             await message.channel.send("{0} Get some sleep so you feel great tomorrow!".format(message.author.mention))
 
 
