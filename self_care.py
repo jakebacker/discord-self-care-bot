@@ -88,6 +88,16 @@ def in_between(now, start, end):
         return start <= now or now < end
 
 
+async def send_help_message(channel):
+    message = "Commands all start with %care \n" \
+              "Valid commands:\n" \
+              "**opt-in**                  Opt into sleep reminders\n" \
+              "**set**                       Set a config option\n" \
+              "                             Options: sleep_start, sleep_end\n" \
+              "**help**                     Send this message"
+    await channel.send(message)
+
+
 @client.event
 async def on_ready():
     global user_data
@@ -111,7 +121,9 @@ async def on_message(message):
         parts = message.content.split(" ")
         user_str = str(message.author.id)
         if parts[0] == "%care":
-            if parts[1] == "opt-in":
+            if len(parts) == 1:
+                await send_help_message(message.channel)
+            elif parts[1] == "opt-in":
                 data = toggle_data(user_str, "opt-in", "true", "false")
                 if not user_data[user_str].__contains__("sleep_start"):
                     set_user_data(user_str, "sleep_start", "00")
@@ -133,6 +145,9 @@ async def on_message(message):
                 else:
                     set_user_data(user_str, key, value)
                     await message.channel.send("Set value {0} to {1} for user {2}".format(key, value, user_str))
+            elif parts[1] == "help":
+                await send_help_message(message.channel)
+
     else:
         hour = get_hour()
 
