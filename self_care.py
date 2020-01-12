@@ -12,12 +12,13 @@ user_data = {}
 config = {}  # late, morning
 
 # Help embed information
-help = discord.Embed(title="Commands", color=0x00ff00)
-help.description = "All commands start with prefix %care"
-help.add_field(name="Command", value="opt-in\nset\n\nhelp", inline=True)
-help.add_field(name="Description",
-               value="Opt into sleep reminders\nSet a config option\n\tOptions: sleep_start, sleep_end, hard_mode\nSend this message",
-               inline=True)
+help_embed = discord.Embed(title="Commands", color=0x00ff00)
+help_embed.description = "All commands start with prefix %care"
+help_embed.add_field(name="Command", value="opt-in\nset\n\nhelp", inline=True)
+help_embed.add_field(name="Description",
+                     value="Opt into sleep reminders\nSet a config option\n\tOptions: sleep_start, sleep_end, "
+                     "hard_mode\nSend this message",
+                     inline=True)
 
 # Data file locations
 # Current config file layout
@@ -104,7 +105,7 @@ def in_between(now, start, end):
 
 # Send the help message to a channel
 async def send_help_message(channel):
-    await channel.send(embed=help)
+    await channel.send(embed=help_embed)
 
 
 # Set up config files and such
@@ -112,7 +113,7 @@ async def send_help_message(channel):
 async def on_ready():
     global user_data
     global config
-    global help
+    global help_embed
 
     print('We have logged in as {0.user}'.format(client))
     if does_file_exist(DATA_FILE):
