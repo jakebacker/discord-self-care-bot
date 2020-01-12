@@ -11,6 +11,15 @@ client = discord.Client()
 user_data = {}
 config = {}  # late, morning
 
+# Help embed information
+help_embed = discord.Embed(title="Commands", color=0x00ff00)
+help_embed.description = "All commands start with prefix %care"
+help_embed.add_field(name="Command", value="opt-in\nset\n\nhelp", inline=True)
+help_embed.add_field(name="Description",
+                     value="Opt into sleep reminders\nSet a config option\n\tOptions: sleep_start, sleep_end, "
+                     "hard_mode\nSend this message",
+                     inline=True)
+
 # Data file locations
 # Current config file layout
 # {"106466406924562432": {"opt-in": "true", "sleep_start": "00", "sleep_end": "06", "hard_mode": "false"}}
@@ -96,13 +105,7 @@ def in_between(now, start, end):
 
 # Send the help message to a channel
 async def send_help_message(channel):
-    message = "Commands all start with %care \n" \
-              "Valid commands:\n" \
-              "**opt-in**                  Opt into sleep reminders\n" \
-              "**set**                       Set a config option\n" \
-              "                             Options: sleep_start, sleep_end, hard_mode\n" \
-              "**help**                     Send this message"
-    await channel.send(message)
+    await channel.send(embed=help_embed)
 
 
 # Set up config files and such
@@ -110,6 +113,8 @@ async def send_help_message(channel):
 async def on_ready():
     global user_data
     global config
+    global help_embed
+
     print('We have logged in as {0.user}'.format(client))
     if does_file_exist(DATA_FILE):
         print("File does not exist!")
@@ -127,7 +132,7 @@ async def on_message(message):
     if message.author == client.user:
         return
 
-    # Make sure it starts with % and is in the bot channel
+    # Make sure it starts with % and is in the bot channel or in direct messages
     if message.content.startswith("%care") and message.channel == client.get_channel(BOT_CHANNEL_ID):
         parts = message.content.split(" ")
 
@@ -149,7 +154,9 @@ async def on_message(message):
 
                 # Notify the user that it worked
                 await message.channel.send("New opt-in status for user {0}: {1}\n"
-                                           "Default range for alerts is 00 to 06".format(message.author.mention, data))
+                                           "Default range for alerts is 00 to 06".format(message.author.mention,
+                                                                                         data))
+
             elif parts[1] == "set":  # Set a configuration value
                 key = parts[2]
                 value = parts[3]
@@ -192,6 +199,7 @@ async def on_message(message):
                     # TODO: Make this have a cool down so it isn't annoying
                     await message.channel.send("{0} Get some sleep so you feel great tomorrow!"
                                                .format(message.author.mention))
+
 
 # Read the token from the file and connect to the server
 read_token()
