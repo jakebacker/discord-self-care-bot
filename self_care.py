@@ -11,6 +11,14 @@ client = discord.Client()
 user_data = {}
 config = {}  # late, morning
 
+# Help embed information
+help = discord.Embed(title="Commands", color=0x00ff00)
+help.description = "All commands start with prefix %care"
+help.add_field(name="Command", value="opt-in\nset\n\nhelp", inline=True)
+help.add_field(name="Description",
+                value="Opt into sleep reminders\nSet a config option\n\tOptions: sleep_start, sleep_end, hard_mode\nSend this message",
+                inline=True)
+
 # Data file locations
 # Current config file layout
 # {"106466406924562432": {"opt-in": "true", "sleep_start": "00", "sleep_end": "06", "hard_mode": "false"}}
@@ -96,13 +104,7 @@ def in_between(now, start, end):
 
 # Send the help message to a channel
 async def send_help_message(channel):
-    message = "Commands all start with %care \n" \
-              "Valid commands:\n" \
-              "**opt-in**                  Opt into sleep reminders\n" \
-              "**set**                       Set a config option\n" \
-              "                             Options: sleep_start, sleep_end, hard_mode\n" \
-              "**help**                     Send this message"
-    await channel.send(message)
+    await channel.send(embed=help)
 
 
 # Set up config files and such
