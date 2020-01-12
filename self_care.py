@@ -141,8 +141,8 @@ async def on_message(message):
     if message.author == client.user:
         return
 
-    # Make sure it starts with % and is in the bot channel
-    if message.content.startswith("%care") and message.channel == client.get_channel(BOT_CHANNEL_ID):
+    # Make sure it starts with % and is in the bot channel or in direct messages
+    if message.content.startswith("%care") and message.channel == client.get_channel(BOT_CHANNEL_ID) or message.guild is None:
         parts = message.content.split(" ")
 
         user_str = str(message.author.id)
