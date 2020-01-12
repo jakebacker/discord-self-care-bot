@@ -11,6 +11,14 @@ client = discord.Client()
 user_data = {}
 config = {}  # late, morning
 
+# Help embed information
+help = discord.Embed(title="Commands", color=0x00ff00)
+help.description = "All commands start with prefix %care"
+help.add_field(name="Command", value="opt-in\nset\n\nhelp", inline=True)
+help.add_field(name="Description",
+                value="Opt into sleep reminders\nSet a config option\n\tOptions: sleep_start, sleep_end, hard_mode\nSend this message",
+                inline=True)
+
 # Data file locations
 # Current config file layout
 # {"106466406924562432": {"opt-in": "true", "sleep_start": "00", "sleep_end": "06", "hard_mode": "false"}}
@@ -38,6 +46,9 @@ def read_token():
     with open(TOKEN_FILE, 'r') as token_file:
         TOKEN = token_file.read()
 
+# Check if direct message channel with user exists
+def dm_exists(user):
+    return user.dm_channel is not None
 
 # Check if a file exists
 def does_file_exist(file_name):
@@ -66,7 +77,6 @@ def init_user(user_id, key, default):
     if not user_data[user_id].__contains__(key):
         user_data[user_id][key] = default
 
-
 # Set a piece of data for a user
 def set_user_data(user_id, key, value):
     init_user(user_id, key, value)
@@ -94,15 +104,16 @@ def in_between(now, start, end):
         return start <= now or now < end
 
 
+# Direct messages the user with given message
+async def dm_user(user, message):
+    if not dm_exists(user):
+        await user.create_dm()
+
+    await user.dm_channel.send(message)
+
 # Send the help message to a channel
 async def send_help_message(channel):
-    message = "Commands all start with %care \n" \
-              "Valid commands:\n" \
-              "**opt-in**                  Opt into sleep reminders\n" \
-              "**set**                       Set a config option\n" \
-              "                             Options: sleep_start, sleep_end, hard_mode\n" \
-              "**help**                     Send this message"
-    await channel.send(message)
+    await channel.send(embed=help)
 
 
 # Set up config files and such
@@ -110,6 +121,9 @@ async def send_help_message(channel):
 async def on_ready():
     global user_data
     global config
+    global help
+
+
     print('We have logged in as {0.user}'.format(client))
     if does_file_exist(DATA_FILE):
         print("File does not exist!")
@@ -127,8 +141,8 @@ async def on_message(message):
     if message.author == client.user:
         return
 
-    # Make sure it starts with % and is in the bot channel
-    if message.content.startswith("%care") and message.channel == client.get_channel(BOT_CHANNEL_ID):
+    # Make sure it starts with % and is in the bot channel or in direct messages
+    if message.content.startswith("%care") and message.channel == client.get_channel(BOT_CHANNEL_ID) or message.guild is None:
         parts = message.content.split(" ")
 
         user_str = str(message.author.id)
@@ -148,8 +162,10 @@ async def on_message(message):
                     set_user_data(user_str, "hard_mode", "false")
 
                 # Notify the user that it worked
-                await message.channel.send("New opt-in status for user {0}: {1}\n"
+                await dm_user(message.author, "New opt-in status for user {0}: {1}\n"
                                            "Default range for alerts is 00 to 06".format(message.author.mention, data))
+                await message.add_reaction('\N{THUMBS UP SIGN}')
+
             elif parts[1] == "set":  # Set a configuration value
                 key = parts[2]
                 value = parts[3]
@@ -157,19 +173,23 @@ async def on_message(message):
                 if key == "sleep_start" or key == "sleep_end":  # Config sleeping times
                     # Make sure it is valid
                     if not len(value) == 2 or not re.match("^\\d{2}$", value) or not 0 <= int(value) <= 23:
-                        await message.channel.send("Invalid data for {0}. "
+                        await dm_user(message.author, "Invalid data for {0}. "
                                                    "Data must be a number between 00 and 23".format(key))
+                        await message.add_reaction('\N{THUMBS UP SIGN}')
                     else:
                         # If the data is valid, set the user's config value
                         set_user_data(user_str, key, value)
-                        await message.channel.send("Set value {0} to {1} for user {2}".format(key, value, user_str))
+                        await dm_user(message.author, "Set value {0} to {1} for user {2}".format(key, value, user_str))
+                        await message.add_reaction('\N{THUMBS UP SIGN}')
                 elif key == "hard_mode":  # Config "hard mode"
                     if not value == "true" and not value == "false":
-                        await message.channel.send("Invalid data for {0}."
+                        await dm_user(message.author, "Invalid data for {0}."
                                                    "Data must be either `true` or `false`".format(key))
+                        await message.add_reaction('\N{THUMBS UP SIGN}')
                     else:
                         set_user_data(user_str, key, value)
-                        await message.channel.send("Set value {0} to {1} for user {2}".format(key, value, user_str))
+                        await dm_user(message.author, "Set value {0} to {1} for user {2}".format(key, value, user_str))
+                        await message.add_reaction('\N{THUMBS UP SIGN}')
 
             elif parts[1] == "help":  # Print the help message
                 await send_help_message(message.channel)
