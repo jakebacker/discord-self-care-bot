@@ -37,6 +37,10 @@ ADMIN_ROLE_ID = 576464175430238208
 TOKEN_FILE = "token.txt"
 TOKEN = ""
 
+# Misc Configs
+
+COOL_DOWN = 600
+
 
 # Get the current hour
 def get_hour():
@@ -201,7 +205,12 @@ async def on_message(message):
                     message.author.kick(reason="Get some sleep so you feel great tomorrow!")
                 else:
                     # Otherwise, just send them a message
-                    # TODO: Make this have a cool down so it isn't annoying
+                    if user_data[str_id].__contains__("last_message"):
+                        last_ts = int(user_data[str_id]["last_message"])
+                        if datetime.now().timestamp() - last_ts < COOL_DOWN:
+                            return
+
+                    user_data[str_id]["last_message"] = datetime.now().timestamp()
                     await message.channel.send("{0} Get some sleep so you feel great tomorrow!"
                                                .format(message.author.mention))
 
