@@ -1,3 +1,5 @@
+import sys
+
 import discord
 import json
 from os import path
@@ -44,8 +46,11 @@ def get_hour():
 # Read the auth token from the file
 def read_token():
     global TOKEN
-    with open(TOKEN_FILE, 'r') as token_file:
-        TOKEN = token_file.read()
+    curr_dir = sys.argv[0]
+    last_index = curr_dir.rfind("/")
+    curr_dir = curr_dir[:last_index]
+    with open(curr_dir + "/" + TOKEN_FILE, 'r') as token_file:
+        TOKEN = token_file.read().strip()
 
 
 # Check if a file exists
