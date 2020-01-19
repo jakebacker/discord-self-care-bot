@@ -51,6 +51,7 @@ def get_hour():
 def read_token():
     global TOKEN
     curr_dir = sys.argv[0]
+    print(curr_dir)
     last_index = curr_dir.rfind("/")
     curr_dir = curr_dir[:last_index]
     with open(curr_dir + "/" + TOKEN_FILE, 'r') as token_file:
@@ -200,18 +201,14 @@ async def on_message(message):
 
             # If the current time is in between the user's defined sleeping times...
             if in_between(hour, int(user_data[str_id]["sleep_start"]), int(user_data[str_id]["sleep_end"])):
-                if user_data[str_id]["hard_mode"] == "true":
-                    # If the user has hard mode on, kick them
-                    message.author.kick(reason="Get some sleep so you feel great tomorrow!")
-                else:
-                    # Otherwise, just send them a message
-                    if user_data[str_id].__contains__("last_message"):
-                        last_ts = int(user_data[str_id]["last_message"])
-                        if datetime.now().timestamp() - last_ts < COOL_DOWN:
-                            return
+                # Otherwise, just send them a message
+                if user_data[str_id].__contains__("last_message"):
+                    last_ts = int(user_data[str_id]["last_message"])
+                    if datetime.now().timestamp() - last_ts < COOL_DOWN:
+                        return
 
-                    user_data[str_id]["last_message"] = datetime.now().timestamp()
-                    await message.channel.send("{0} Get some sleep so you feel great tomorrow!"
+                user_data[str_id]["last_message"] = datetime.now().timestamp()
+                await client.get_channel(BOT_CHANNEL_ID).send("{0} Get some sleep so you feel great tomorrow!"
                                                .format(message.author.mention))
 
 
